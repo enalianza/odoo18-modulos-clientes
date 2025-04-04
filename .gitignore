@@ -1,0 +1,8 @@
+*.pyc
+__pycache__/
+*.swp
+*.log
+.idea/
+.vscode/
+.env
+.DS_Store

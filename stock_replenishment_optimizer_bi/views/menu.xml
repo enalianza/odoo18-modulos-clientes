@@ -1,0 +1,15 @@
+
+<odoo>
+    <menuitem id="menu_inventory_operations" name="Operaciones" parent="stock.menu_stock_warehouse_mgmt"/>
+    <menuitem id="menu_replenishment_optimizer_root" name="Aprovisionamiento" parent="menu_inventory_operations"/>
+    <record id="action_replenishment_optimizer_wizard" model="ir.actions.act_window">
+        <field name="name">Mínimos y Máximos con BI</field>
+        <field name="res_model">stock.replenishment.optimizer.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+    <menuitem id="menu_replenishment_optimizer_wizard"
+              name="Mínimos y Máximos con BI"
+              parent="menu_replenishment_optimizer_root"
+              action="action_replenishment_optimizer_wizard"/>
+</odoo>

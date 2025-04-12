@@ -1,0 +1,27 @@
+
+<odoo>
+    <record id="view_replenishment_optimizer_wizard_form" model="ir.ui.view">
+        <field name="name">stock.replenishment.optimizer.wizard.form</field>
+        <field name="model">stock.replenishment.optimizer.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Mínimos y Máximos con BI">
+                <group>
+                    <label string="Este asistente genera sugerencias de stock mínimo y máximo con base en salidas reales de inventario."/>
+                    <field name="date_from"/>
+                    <field name="date_to"/>
+                    <field name="location_ids"/>
+                    <field name="categ_ids"/>
+                    <field name="product_ids"/>
+                    <field name="coverage_days"/>
+                    <field name="adjustment_factor"/>
+                    <field name="exclude_inactive"/>
+                    <field name="round_to_multiple"/>
+                </group>
+                <footer>
+                    <button string="Calcular" type="object" name="action_calculate" class="btn-primary"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

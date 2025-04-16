@@ -1,0 +1,22 @@
+<odoo>
+  <data noupdate="0">
+
+    <!-- Acción dummy -->
+    <record id="action_minmax_dummy" model="ir.actions.act_window">
+      <field name="name">Mínimos y Máximos con BI</field>
+      <field name="res_model">res.users</field>
+      <field name="view_mode">form</field>
+      <field name="target">current</field>
+    </record>
+
+    <!-- Menú dentro de enAlianza → Inventario -->
+    <menuitem
+      id="menu_minmax"
+      name="Mínimos y Máximos con BI"
+      parent="enalianza_suite.menu_enalianza_inventory"
+      action="action_minmax_dummy"
+      sequence="20"
+    />
+
+  </data>
+</odoo>

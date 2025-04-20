@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Solo crearemos un archivo vacío para satisfacer la referencia -->
+    <data>
+        <!-- Aquí podrías definir grupos de seguridad específicos si los necesitas -->
+    </data>
+</odoo>

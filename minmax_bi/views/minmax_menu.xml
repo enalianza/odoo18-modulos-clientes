@@ -1,22 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
 <odoo>
-  <data noupdate="0">
-
-    <!-- Acción dummy -->
-    <record id="action_minmax_dummy" model="ir.actions.act_window">
-      <field name="name">Mínimos y Máximos con BI</field>
-      <field name="res_model">res.users</field>
-      <field name="view_mode">form</field>
-      <field name="target">current</field>
+    <!-- Menú -->
+    <menuitem id="menu_minmax_bi" 
+              name="Mínimos y Máximos con BI" 
+              parent="enalianza_suite.menu_enalianza_inventory" 
+              action="action_minmax_wizard" 
+              groups="stock.group_stock_manager" 
+              sequence="150"/>
+    
+    <!-- Acción del Wizard -->
+    <record id="action_minmax_wizard" model="ir.actions.act_window">
+        <field name="name">Cálculo de Mínimos y Máximos</field>
+        <field name="res_model">minmax.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
     </record>
-
-    <!-- Menú dentro de enAlianza → Inventario -->
-    <menuitem
-      id="menu_minmax"
-      name="Mínimos y Máximos con BI"
-      parent="enalianza_suite.menu_enalianza_inventory"
-      action="action_minmax_dummy"
-      sequence="20"
-    />
-
-  </data>
+    
+    <!-- Vista de formulario para el Wizard -->
+    <record id="view_minmax_wizard_form" model="ir.ui.view">
+        <field name="name">minmax.wizard.form</field>
+        <field name="model">minmax.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Cálculo de Mínimos y Máximos">
+                <group>
+                    <group>
+                        <field name="warehouse_ids" widget="many2many_tags"/>
+                        <field name="min_coverage_days"/>
+                        <field name="max_coverage_days"/>
+                    </group>
+                    <group>
+                        <field name="product_ids" widget="many2many_tags"/>
+                        <field name="product_category_ids" widget="many2many_tags"/>
+                        <field name="include_inactive"/>
+                        <field name="round_to_multiple"/>
+                    </group>
+                </group>
+                <footer>
+                    <button name="action_calculate" string="Calcular" type="object" class="btn-primary"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+    
+    <!-- Vista de formulario simplificada para el cálculo -->
+    <record id="view_minmax_calculation_form" model="ir.ui.view">
+        <field name="name">minmax.calculation.form</field>
+        <field name="model">minmax.calculation</field>
+        <field name="arch" type="xml">
+            <form string="Cálculo de Mínimos y Máximos">
+                <header>
+                    <button name="action_calculate" string="Recalcular" type="object" 
+                            invisible="state != 'draft'" class="btn-primary"/>
+                    <button name="action_apply" string="Aplicar a Reglas de Reabastecimiento" 
+                            type="object" invisible="state != 'calculated'" class="btn-primary"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,calculated,applied"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="calculation_date"/>
+                            <field name="user_id"/>
+                        </group>
+                        <group>
+                            <field name="warehouse_ids" widget="many2many_tags"/>
+                            <field name="min_coverage_days"/>
+                            <field name="max_coverage_days"/>
+                            <field name="include_inactive"/>
+                            <field name="round_to_multiple"/>
+                        </group>
+                    </group>
+                    <!-- Temporalmente quitamos la sección de líneas para probar -->
+                </sheet>
+            </form>
+        </field>
+    </record>
+    
+    <!-- Vista de lista para los cálculos -->
+    <record id="view_minmax_calculation_tree" model="ir.ui.view">
+        <field name="name">minmax.calculation.list</field>
+        <field name="model">minmax.calculation</field>
+        <field name="arch" type="xml">
+            <list string="Cálculos de Mínimos y Máximos">
+                <field name="calculation_date"/>
+                <field name="user_id"/>
+                <field name="state"/>
+            </list>
+        </field>
+    </record>
+    
+    <!-- Acción para ver los cálculos históricos -->
+    <record id="action_minmax_calculation" model="ir.actions.act_window">
+        <field name="name">Histórico de Cálculos</field>
+        <field name="res_model">minmax.calculation</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+    
+    <!-- Menú para el histórico -->
+    <menuitem id="menu_minmax_calculation_history" 
+              name="Histórico de Cálculos" 
+              parent="menu_minmax_bi" 
+              action="action_minmax_calculation" 
+              groups="stock.group_stock_manager" 
+              sequence="10"/>
 </odoo>

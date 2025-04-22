@@ -1,5 +1,7 @@
 from odoo import models, fields, api
 from odoo.exceptions import UserError
+from datetime import datetime, timedelta
+# Este es el de Mínimos y Máximos con BI
 
 class MinMaxWizard(models.TransientModel):
     _name = 'minmax.wizard'
@@ -32,20 +34,42 @@ class MinMaxWizard(models.TransientModel):
     )
     
     min_coverage_days = fields.Integer(
-        string='Cobertura mínima (días)', 
+        string='Cobertura mínima (días)',
+        help='Cobertura estimada de ventas mínimas en estos días',  
         default=60, 
         required=True
     )
     
     max_coverage_days = fields.Integer(
-        string='Cobertura máxima (días)', 
+        string='Cobertura máxima (días)',
+        help='Cobertura estimada de ventas máximas en estos días', 
         default=90, 
         required=True
     )
     
     round_to_multiple = fields.Boolean(
-        string='Redondear a múltiplo de compra', 
+        string='Redondear a múltiplos de compra', 
+        help='Redondeará hacia las unidades que que sean multiplos de sus unidades de compra',
         default=True
+    )
+
+    date_start = fields.Date(
+    string='Fecha inicial de análisis',
+    help='Fecha inicial de análisis del periodo de ventas', 
+    default=lambda self: fields.Date.today() - timedelta(days=365),
+    required=True
+    )
+    date_end = fields.Date(
+        string='Fecha final de análisis', 
+        default=lambda self: fields.Date.today(),
+        help='Fecha final de análisis del periodo de ventas',
+        required=True
+    )
+    adjustment_factor = fields.Float(
+        string='Factor de ajuste (%)', 
+        default=20.0,
+        help='Porcentaje para ajustar la demanda según estacionalidad o tendencias',
+        required=True
     )
 
     @api.constrains('min_coverage_days', 'max_coverage_days')
@@ -53,6 +77,12 @@ class MinMaxWizard(models.TransientModel):
         for record in self:
             if record.min_coverage_days >= record.max_coverage_days:
                 raise UserError('La cobertura mínima debe ser menor que la máxima')
+
+    @api.constrains('date_start', 'date_end')
+    def _check_dates(self):
+        for record in self:
+            if record.date_start > record.date_end:
+                raise UserError('La fecha inicial debe ser anterior a la fecha final')
 
     def action_calculate(self):
         self.ensure_one()
@@ -67,6 +97,9 @@ class MinMaxWizard(models.TransientModel):
             # Mantener compatibilidad con el campo product_ids
             'product_ids': [(6, 0, self.product_ids.ids)],
             'product_category_ids': [(6, 0, self.product_category_ids.ids)],
+            'date_start': self.date_start,
+            'date_end': self.date_end,
+            'adjustment_factor': self.adjustment_factor,
         }
         
         # Crear el cálculo

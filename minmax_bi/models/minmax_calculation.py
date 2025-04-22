@@ -1,6 +1,8 @@
 from odoo import models, fields, api
 from datetime import datetime, timedelta
 from odoo.exceptions import UserError
+from datetime import datetime, timedelta
+# Este es el de Histórico de cálculos
 
 class MinMaxCalculation(models.Model):
     _name = 'minmax.calculation'
@@ -15,11 +17,13 @@ class MinMaxCalculation(models.Model):
     warehouse_ids = fields.Many2many('stock.warehouse',
                                     string='Almacenes')
     min_coverage_days = fields.Integer(string='Cobertura mínima (días)',
-                                      default=60)
+                                    help='Cobertura estimada de ventas mínimas en estos días',
+                                    default=60)
     max_coverage_days = fields.Integer(string='Cobertura máxima (días)',
-                                      default=90)
+                                    help='Cobertura estimada de ventas máximas en estos días',
+                                    default=90)
     include_inactive = fields.Boolean(string='Incluir productos inactivos', 
-                                     default=False)
+                                    default=False)
     
     # Mantener este campo para compatibilidad, pero ya no se utilizará directamente
     product_ids = fields.Many2many(
@@ -40,9 +44,23 @@ class MinMaxCalculation(models.Model):
         string='Categorías de productos'
     )
     
-    round_to_multiple = fields.Boolean(string='Redondear a múltiplo de compra', 
-                                      default=True)
+    round_to_multiple = fields.Boolean(string='Redondear a múltiplos de compra',
+                        help='Redondeará hacia las unidades que que sean multiplos de sus unidades de compra',
+                        default=True)
     
+    date_start = fields.Date(string='Fecha inicial de análisis', 
+                        default=lambda self: fields.Date.today() - timedelta(days=365),
+                        help='Fecha inicial de análisis del periodo de ventas',
+                        required=True)
+    date_end = fields.Date(string='Fecha final de análisis', 
+                        default=lambda self: fields.Date.today(),
+                        help='Fecha final de análisis del periodo de ventas',
+                        required=True)
+    adjustment_factor = fields.Float(string='Factor de ajuste (%)', 
+                        default=20.0,
+                        help='Porcentaje para ajustar la demanda según estacionalidad o tendencias',
+                        required=True)
+
     # Cambiando a line_ids por consistencia
     line_ids = fields.One2many('minmax.calculation.line',
                               'calculation_id', string='Líneas de cálculo')
@@ -141,9 +159,9 @@ class MinMaxCalculation(models.Model):
         if not self.line_ids:
             raise UserError('No hay líneas para calcular')
 
-        # Período de análisis: un año hacia atrás para capturar estacionalidad
-        date_end = fields.Date.today()
-        date_start = date_end - timedelta(days=365)
+        # Usar el período de análisis definido por el usuario
+        date_end = self.date_start
+        date_start = self.date_end
 
         for line in self.line_ids:
             # Obtener las ventas del período

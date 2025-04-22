@@ -27,8 +27,11 @@
                         <field name="warehouse_ids" widget="many2many_tags"/>
                         <field name="min_coverage_days"/>
                         <field name="max_coverage_days"/>
+                        <field name="adjustment_factor"/>
                     </group>
                     <group>
+                        <field name="date_start"/>
+                        <field name="date_end"/>
                         <field name="product_category_ids" widget="many2many_tags"/>
                         <field name="include_inactive"/>
                         <field name="round_to_multiple"/>
@@ -82,8 +85,11 @@
                                         <field name="warehouse_ids" widget="many2many_tags"/>
                                         <field name="min_coverage_days"/>
                                         <field name="max_coverage_days"/>
+                                        <field name="adjustment_factor"/>
                                     </group>
                                     <group>
+                                        <field name="date_start"/>
+                                        <field name="date_end"/>
                                         <field name="include_inactive"/>
                                         <field name="round_to_multiple"/>
                                     </group>
@@ -134,6 +140,9 @@
             <list string="Cálculos de Mínimos y Máximos">
                 <field name="calculation_date"/>
                 <field name="user_id"/>
+                <field name="adjustment_factor"/>
+                <field name="date_start"/>
+                <field name="date_end"/>
                 <field name="state"/>
             </list>
         </field>

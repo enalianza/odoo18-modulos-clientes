@@ -13,7 +13,7 @@ class MinMaxWizard(models.TransientModel):
     product_ids = fields.Many2many(
         'product.product', 
         string='Productos específicos',
-        domain=[('type', '=', 'product', 'consu')]
+        domain=[('type', 'in', ['product', 'consu'])]
     )
     
     # Nuevo campo para las líneas de productos
@@ -139,7 +139,7 @@ class MinmaxWizardProductLine(models.TransientModel):
     product_id = fields.Many2one(
         'product.product', 
         string='Producto',
-        domain=[('type', '=', 'product', 'consu')]
+        domain=[('type', 'in', ['product', 'consu'])]
     )
     
     name = fields.Char(

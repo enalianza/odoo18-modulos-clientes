@@ -29,7 +29,7 @@ class MinMaxCalculation(models.Model):
     product_ids = fields.Many2many(
         'product.product',
         string='Productos específicos',
-        domain=[('type', '=', 'product', 'consu')]
+        domain=[('type', 'in', ['product', 'consu'])]
     )
     
     # Nuevo campo para las líneas de productos
@@ -92,7 +92,7 @@ class MinMaxCalculation(models.Model):
         # Si hay categorías seleccionadas, incluir esos productos
         if self.product_category_ids:
             domain = [
-                ('type', '=', 'product'),
+                ('type', 'in', ['product', 'consu']),
                 ('categ_id', 'child_of', self.product_category_ids.ids)
             ]
             

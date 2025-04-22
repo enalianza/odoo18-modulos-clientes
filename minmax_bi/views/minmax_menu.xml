@@ -42,7 +42,7 @@
                     <page string="Selección de productos">
                         <field name="product_line_ids">
                             <list editable="bottom">
-                                <field name="product_id" domain="[('type', '=', ['product', 'consu'])]"/>
+                                <field name="product_id" domain="[('type', 'in', ['product', 'consu'])]"/>
                                 <field name="name" readonly="1"/>
                                 <field name="product_type" readonly="1"/>
                                 <field name="qty_available" readonly="1"/>

@@ -11,7 +11,7 @@ class MinmaxProductLine(models.Model):
     product_id = fields.Many2one(
         'product.product', 
         string='Producto',
-        domain=[('type', '=', 'product')]
+        domain=[('type', 'in', ['product', 'consu'])]
     )
     
     name = fields.Char(

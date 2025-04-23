@@ -1,6 +1,6 @@
 {
     'name': 'Mínimos y Máximos con BI',
-    'version': '0.1',
+    'version': '1.0.0',
     'category': 'Inventory',
     'summary': 'Optimización de stock usando BI',
     'description': 'Submódulo para sugerir mínimos y máximos con base en datos históricos y análisis.',

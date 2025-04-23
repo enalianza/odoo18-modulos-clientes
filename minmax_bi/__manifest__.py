@@ -5,10 +5,11 @@
     'summary': 'Optimización de stock usando BI',
     'description': 'Submódulo para sugerir mínimos y máximos con base en datos históricos y análisis.',
     'author': 'enAlianza',
-    'depends': ['stock', 'purchase', 'product', 'enalianza_suite'],
+    'depends': ['stock', 'purchase', 'product', 'enalianza_suite', 'report_xlsx'],
     'data': [
         'security/ir.model.access.csv',
         'views/minmax_menu.xml',
+        'reports/minmax_report.xml',
     ],
     'demo': [],
     'installable': True,

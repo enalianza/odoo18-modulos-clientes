@@ -1,7 +1,9 @@
 from odoo import models, fields, api
 from datetime import datetime, timedelta
 from odoo.exceptions import UserError
-from datetime import datetime, timedelta
+import math
+# from datetime import datetime, timedelta
+
 # Este es el de Histórico de cálculos
 
 class MinMaxCalculation(models.Model):
@@ -71,6 +73,28 @@ class MinMaxCalculation(models.Model):
         ('applied', 'Aplicado')
     ], string='Estado', default='draft')
 
+    # Validaciones de las variables
+    @api.constrains('min_coverage_days', 'max_coverage_days', 'adjustment_factor')
+    def _check_positive_values(self):
+        for record in self:
+            if record.min_coverage_days < 0:
+                raise UserError('La cobertura mínima no puede ser negativa.')
+            if record.max_coverage_days < 0:
+                raise UserError('La cobertura máxima no puede ser negativa.')
+            if record.adjustment_factor < 0:
+                raise UserError('El factor de ajuste no puede ser negativo.')
+            if not float(record.min_coverage_days).is_integer():
+                raise UserError('La cobertura mínima debe ser un número entero.')
+            if not float(record.max_coverage_days).is_integer():
+                raise UserError('La cobertura máxima debe ser un número entero.')
+
+    # para asegurar que el min_coverage_days sea menor que max_coverage_days:
+    @api.constrains('min_coverage_days', 'max_coverage_days')
+    def _check_coverage_days(self):
+        for record in self:
+            if record.min_coverage_days >= record.max_coverage_days:
+                raise UserError('La cobertura mínima debe ser menor que la máxima')
+
     @api.model_create_multi
     def create(self, vals_list):
         records = super(MinMaxCalculation, self).create(vals_list)
@@ -126,7 +150,16 @@ class MinMaxCalculation(models.Model):
                 # Obtener datos del proveedor principal
                 seller = product.seller_ids and product.seller_ids[0] or False
                 lead_time = seller and seller.delay or 0
-                qty_multiple = seller and seller.min_qty or 1.0
+                qty_multiple = 1.0
+                if seller:
+                    # Obtener la unidad de compra del producto desde el proveedor
+                    uom_po = seller.product_uom or product.uom_po_id or product.uom_id
+                    # Si existe una unidad de compra diferente, obtener el factor de conversión
+                    if uom_po and uom_po != product.uom_id:
+                        qty_multiple = uom_po.factor_inv
+                    else:
+                        # Si no hay una unidad de compra específica, usar el campo min_qty como respaldo
+                        qty_multiple = seller.min_qty or 1.0
 
                 vals = {
                     'calculation_id': self.id,
@@ -149,9 +182,18 @@ class MinMaxCalculation(models.Model):
             
         return False
 
+    def action_export_excel(self):
+        """Exportar los resultados a Excel usando report_xlsx"""
+        self.ensure_one()
+        return self.env.ref('minmax_bi.report_minmax_xlsx').report_action(self)
+   
     def action_calculate(self):
         self.ensure_one()
         
+        # Validación adicional para valores negativos
+        if self.min_coverage_days < 0 or self.max_coverage_days < 0 or self.adjustment_factor < 0:
+            raise UserError('No se pueden realizar cálculos con valores negativos. Por favor corrija los valores de cobertura y factor de ajuste.')
+
         # Generar las líneas de cálculo
         if not self._generate_calculation_lines():
             raise UserError('No se encontraron productos para el cálculo')
@@ -255,15 +297,25 @@ class MinMaxCalculation(models.Model):
             # Redondear a múltiplos de compra si es necesario
             if self.round_to_multiple and line.qty_multiple > 0:
                 if min_qty > 0:
-                    min_qty = (min_qty // line.qty_multiple) * line.qty_multiple
-                    if min_qty < avg_daily_demand * line.lead_time_days:
-                        min_qty += line.qty_multiple
-                
+                    # Redondear hacia arriba al múltiplo más cercano
+                    min_qty = math.ceil(min_qty / line.qty_multiple) * line.qty_multiple
+               
                 if max_qty > 0:
-                    max_qty = (max_qty // line.qty_multiple) * line.qty_multiple
+                    # Redondear hacia arriba al múltiplo más cercano
+                    max_qty = math.ceil(max_qty / line.qty_multiple) * line.qty_multiple
                     if max_qty < min_qty:
                         max_qty += line.qty_multiple
-            
+                    
+            else:
+                # Siempre redondear hacia arriba al entero siguiente, incluso si no se usa múltiplo de compra
+                if min_qty > 0:
+                    min_qty = math.ceil(min_qty)
+                
+                if max_qty > 0:
+                    max_qty = math.ceil(max_qty)
+                    if max_qty < min_qty:
+                        max_qty = min_qty + 1  # Asegurar que max sea mayor que min
+
             line.suggested_min = min_qty
             line.suggested_max = max_qty
         

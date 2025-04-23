@@ -155,60 +155,118 @@ class MinMaxCalculation(models.Model):
         # Generar las líneas de cálculo
         if not self._generate_calculation_lines():
             raise UserError('No se encontraron productos para el cálculo')
-            
+        
         if not self.line_ids:
             raise UserError('No hay líneas para calcular')
-
+        
+        # Comprobar qué módulos están instalados
+        sale_installed = self.env['ir.module.module'].sudo().search([
+            ('name', '=', 'sale'),
+            ('state', '=', 'installed'),
+        ], limit=1)
+        
+        pos_installed = self.env['ir.module.module'].sudo().search([
+            ('name', '=', 'point_of_sale'),
+            ('state', '=', 'installed'),
+        ], limit=1)
+        
+        if not sale_installed and not pos_installed:
+            raise UserError('Para usar este módulo, debe tener instalado al menos el módulo de Ventas o el de Punto de Venta.')
+        
         # Usar el período de análisis definido por el usuario
-        date_end = self.date_start
-        date_start = self.date_end
-
+        date_start = self.date_start
+        date_end = self.date_end
+        
         for line in self.line_ids:
-            # Obtener las ventas del período
-            domain = [
-                ('state', '=', 'done'),
-                ('product_id', '=', line.product_id.id),
-                ('date', '>=', date_start),
-                ('date', '<=', date_end),
-            ]
+            product = line.product_id
+            warehouse = line.warehouse_id
+            total_qty = 0.0
             
-            if line.warehouse_id:
-                domain.append(('picking_id.picking_type_id.warehouse_id', '=',
-                             line.warehouse_id.id))
-
-            # Obtener movimientos de stock de salida
-            moves = self.env['stock.move'].search(domain)
-
-            # Calcular la demanda diaria promedio
-            total_qty = sum(moves.mapped('product_qty'))
-            days = (date_end - date_start).days or 1
-            avg_daily_demand = total_qty / days
-
-            # Aplicar factor de ajuste (por defecto 100%)
-            avg_daily_demand = avg_daily_demand * (line.adjustment_factor / 100.0 if hasattr(line, 'adjustment_factor') else 1.0)
-
+            # 1. Analizar órdenes de venta confirmadas y entregadas (si el módulo está instalado)
+            if sale_installed:
+                sale_domain = [
+                    ('state', '=', 'sale'),  # Órdenes confirmadas
+                    ('order_line.product_id', '=', product.id),
+                    ('date_order', '>=', date_start),
+                    ('date_order', '<=', date_end),
+                    ('warehouse_id', '=', warehouse.id)
+                ]
+                
+                sales = self.env['sale.order'].search(sale_domain)
+                
+                # Filtrar por líneas entregadas completamente
+                for sale in sales:
+                    for sale_line in sale.order_line.filtered(lambda l: l.product_id.id == product.id):
+                        # Verificar si está completamente entregada
+                        if sale_line.qty_delivered >= sale_line.product_uom_qty:
+                            total_qty += sale_line.product_uom_qty
+            
+            # 2. Analizar pedidos de POS cerrados (si el módulo está instalado)
+            if pos_installed:
+                pos_domain = [
+                    ('state', '=', 'done'),  # Pedidos pagados y procesados
+                    ('lines.product_id', '=', product.id),
+                    ('date_order', '>=', date_start),
+                    ('date_order', '<=', date_end)
+                ]
+                
+                # El almacén en POS se determina por config_id
+                pos_configs = self.env['pos.config'].search([('warehouse_id', '=', warehouse.id)])
+                if pos_configs:
+                    pos_domain.append(('config_id', 'in', pos_configs.ids))
+                
+                pos_orders = self.env['pos.order'].search(pos_domain)
+                
+                for pos_order in pos_orders:
+                    for pos_line in pos_order.lines.filtered(lambda l: l.product_id.id == product.id):
+                        total_qty += pos_line.qty
+            
+            # Si no hay datos de ventas, podemos usar movimientos de stock como fallback
+            if total_qty == 0:
+                domain = [
+                    ('state', '=', 'done'),
+                    ('product_id', '=', product.id),
+                    ('date', '>=', date_start),
+                    ('date', '<=', date_end),
+                    ('location_dest_id.usage', '=', 'customer'),  # Solo movimientos a clientes
+                ]
+                
+                if warehouse:
+                    domain.append(('picking_id.picking_type_id.warehouse_id', '=', warehouse.id))
+                
+                # Obtener movimientos de stock de salida
+                moves = self.env['stock.move'].search(domain)
+                total_qty = sum(moves.mapped('product_qty'))
+            
+            # Calcular la demanda diaria estimada
+            days = (date_end - date_start).days + 1  # +1 para incluir ambos días
+            avg_daily_demand = (total_qty / days) * (1 + self.adjustment_factor / 100.0)
+            
+            # Guardar las unidades vendidas
+            line.total_sold = total_qty
+            
             # Guardar la demanda calculada
             line.avg_daily_demand = avg_daily_demand
-
+            
             # Calcular mínimos y máximos
-            min_qty = avg_daily_demand * (line.lead_time_days +
-                                        self.min_coverage_days)
-            max_qty = avg_daily_demand * (line.lead_time_days +
-                                        self.max_coverage_days)
-
+            min_qty = avg_daily_demand * (line.lead_time_days + self.min_coverage_days)
+            max_qty = avg_daily_demand * (line.lead_time_days + self.max_coverage_days)
+            
             # Redondear a múltiplos de compra si es necesario
             if self.round_to_multiple and line.qty_multiple > 0:
-                min_qty = (min_qty // line.qty_multiple) * line.qty_multiple
-                if min_qty < avg_daily_demand * line.lead_time_days:
-                    min_qty += line.qty_multiple
+                if min_qty > 0:
+                    min_qty = (min_qty // line.qty_multiple) * line.qty_multiple
+                    if min_qty < avg_daily_demand * line.lead_time_days:
+                        min_qty += line.qty_multiple
                 
-                max_qty = (max_qty // line.qty_multiple) * line.qty_multiple
-                if max_qty < min_qty:
-                    max_qty += line.qty_multiple
-
+                if max_qty > 0:
+                    max_qty = (max_qty // line.qty_multiple) * line.qty_multiple
+                    if max_qty < min_qty:
+                        max_qty += line.qty_multiple
+            
             line.suggested_min = min_qty
             line.suggested_max = max_qty
-
+        
         self.state = 'calculated'
         return True
 

@@ -118,6 +118,7 @@
                                         <field name="current_min"/>
                                         <field name="current_max"/>
                                         <field name="lead_time_days"/>
+                                        <field name="total_sold"/>
                                         <field name="avg_daily_demand"/>
                                         <field name="suggested_min"/>
                                         <field name="suggested_max"/>

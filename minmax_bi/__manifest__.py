@@ -7,6 +7,7 @@
     'author': 'enAlianza',
     'depends': ['stock', 'purchase', 'product', 'enalianza_suite', 'report_xlsx'],
     'data': [
+        'security/security.xml',
         'security/ir.model.access.csv',
         'views/minmax_menu.xml',
         'reports/minmax_report.xml',
